@@ -1,0 +1,17 @@
+Package: lab6knapsack
+Title: Algorithms for the Knapsack Problem
+Version: 0.0.0.9000
+Authors@R: c(
+    person(given = "Thai", family = "Pham",
+           email = "thaipham071967@gmail.com",
+           role = c("aut", "cre")),
+    person(given = "Hampus", family = "Beijer",
+           email = "hampus.beijer@outlook.com",
+           role = "aut")
+    )
+Description: Implements brute-force search, dynamic programming,
+    and a greedy heuristic for the knapsack problem. Compares their correctness and computational performance.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
