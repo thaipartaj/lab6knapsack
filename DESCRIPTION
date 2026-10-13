@@ -15,3 +15,5 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+URL: https://github.com/thaipartaj/lab6knapsack
+BugReports: https://github.com/thaipartaj/lab6knapsack/issues
