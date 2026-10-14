@@ -111,11 +111,3 @@ knapsack_dynamic <- function(x, W) {
     elements = valda
   )
 }
-Skapa tre föremål.
-Föremål 1 har vikt 2 och värde 3, och så vidare.
-x <- data.frame(
-  w = c(2, 3, 4),
-  v = c(3, 4, 5)
-)
-Hitta bästa kombinationen med maxvikten 5.
-knapsack_dynamic(x, W = 5)

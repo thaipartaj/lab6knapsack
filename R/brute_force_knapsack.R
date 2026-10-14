@@ -50,6 +50,8 @@ brute_force_knapsack <- function(x, W) {
   # There are 2^n possible selections of n items.
   # Label them from 0 (take nothing) to 2^n - 1 (take everything).
   # Each label's first n binary bits form the selection checklist.
+  weights <- x$w
+  values <- x$v
   for (selection in 0:(2^n - 1)) {
 
     # Create a checklist with one bit for each item.
@@ -58,11 +60,11 @@ brute_force_knapsack <- function(x, W) {
     # Find the indices of the items marked with a 1.
     elements <- which(bits == 1L)
 
-    total_weight <- sum(x$w[elements])
+    total_weight <- sum(weights[elements])
 
     # Only consider selections that fit.
     if (total_weight <= W) {
-      total_value <- sum(x$v[elements])
+      total_value <- sum(values[elements])
 
       # Remember this selection if it improves the best value.
       if (total_value > best_value) {
