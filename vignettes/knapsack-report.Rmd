@@ -19,9 +19,7 @@ library(lab6knapsack)
 ```
 
 ## Runtime measurements
-
-We measured elapsed time using `system.time()`. Data were generated
-before timing, using seed 42. Each result below is from a single run.
+We measured elapsed time using `system.time()`. Data were generated before timing, using seed 42. Each result below is from a single run.
 
 | Algorithm | Number of items | Capacity W | Elapsed time |
 |:----------|----------------:|-----------:|-------------:|
@@ -29,25 +27,16 @@ before timing, using seed 42. Each result below is from a single run.
 | Brute force, improved | 16 | 2000 | 0.15 s |
 | Greedy | 1,000,000 | 3500 | 0.11 s |
 
-Brute force examines every possible selection and returns an exact
-solution. Greedy ranks items by value per unit of weight and provides
-a fast approximation.
+Brute force examines every possible selection and returns an exact solution. Greedy ranks items by value per unit of weight and provides a fast approximation.
 
 ## Profiling and improvement
-
 We profiled the brute-force function using `profvis`:
-
 ```{r profiling, eval=FALSE}
 profvis::profvis({
   brute_force_knapsack(items16, W = 2000)
 })
 ```
 
-The profile highlighted time spent calculating total weights inside
-the loop. We extracted the weight and value columns once before the
-loop and reused those vectors, avoiding repeated column retrieval.
+The profile highlighted time spent calculating total weights inside the loop. We extracted the weight and value columns once before the loop and reused those vectors, avoiding repeated column retrieval.
 
-Elapsed time decreased from 0.30 to 0.15 seconds: an observed speedup
-of 2 and a 50% reduction in runtime. The algorithm still examines
-all possible selections. Repeated measurements would be needed
-to estimate the improvement more reliably.
+Elapsed time decreased from 0.30 to 0.15 seconds: an observed speedup of 2 and a 50% reduction in runtime. The algorithm still examines all possible selections. Repeated measurements would be needed to estimate the improvement more reliably.
