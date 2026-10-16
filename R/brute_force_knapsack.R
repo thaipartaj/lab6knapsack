@@ -59,7 +59,7 @@ brute_force_knapsack <- function(x, W, parallel = FALSE, cores = NULL) {
   # Validate the switch before choosing an implementation.
   stopifnot("parallel must be TRUE or FALSE." = is.logical(parallel) && length(parallel) == 1L && !is.na(parallel))
 
-  # Forward parallel requests to the separate exported function.
+  # Forward parallel requests to the internal parallel implementation.
   if (parallel) {return(brute_force_knapsack_parallel(x, W, cores = cores))}
 
   # Check the inputs

@@ -1,5 +1,6 @@
 ---
 title: "Knapsack Algorithms and Performance"
+author: "Thai Pham and Hampus Beijer"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Knapsack Algorithms and Performance}
@@ -7,36 +8,266 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  message = FALSE
+)
+
+library(lab6knapsack)
+
+# Access the original internal implementation for comparison.
+before <- getFromNamespace("brute_force_before", "lab6knapsack")
+```
+
+## The knapsack problem
+
+The aim is to select objects with the highest total value without exceeding a weight limit. Each object can be selected at most once.
+
+The functions take a data frame with weights `w`, values `v`, and a capacity `W`. They return `value`, the total selected value, and `elements`, the selected row numbers.
+
+## Using the functions
+
+Consider three objects and a capacity of 50:
+
+```{r example-data}
+items <- data.frame(
+  w = c(10, 20, 30),
+  v = c(60, 100, 120)
 )
 ```
 
-```{r setup}
-library(lab6knapsack)
+### Brute force
+
+Brute force examines all possible selections and returns an exact solution. There are `2^n` selections, so it is intended for small datasets.
+
+```{r example-brute-force}
+brute_force_knapsack(items, W = 50)
 ```
 
-## Runtime measurements
-We measured elapsed time using `system.time()`. Data were generated before timing, using seed 42. Each result below is from a single run.
+Objects 2 and 3 give the optimal value of 220.
 
-| Algorithm | Number of items | Capacity W | Elapsed time |
-|:----------|----------------:|-----------:|-------------:|
-| Brute force, original | 16 | 2000 | 0.30 s |
-| Brute force, improved | 16 | 2000 | 0.15 s |
-| Greedy | 1,000,000 | 3500 | 0.11 s |
+### Dynamic programming
 
-Brute force examines every possible selection and returns an exact solution. Greedy ranks items by value per unit of weight and provides a fast approximation.
+Dynamic programming compares including or excluding each object. It saves answers to smaller problems so they can be reused, then works backwards to identify the selected objects.
 
-## Profiling and improvement
-We profiled the brute-force function using `profvis`:
+It returns an exact solution and requires integer weights and capacity. Its standard time and table-space bounds are O(nW), where `n` is the number of objects and `W` is the capacity.
+
+```{r example-dynamic}
+knapsack_dynamic(items, W = 50)
+```
+
+The result agrees with brute force: objects 2 and 3 give a total value of 220.
+
+### Greedy approximation
+
+Greedy ranks objects by value per unit of weight and selects them in that order until the next object does not fit. It compares this selection with the most valuable single object that fits and returns the better result.
+
+This method gives at least half the optimal value for positive weights and values. The usual sorting cost is O(n log n).
+
+```{r example-greedy}
+greedy_knapsack(items, W = 50)
+```
+
+Here, greedy selects objects 1 and 2, giving 160 rather than the optimum of 220. Its advantage is that it can handle much larger datasets quickly.
+
+### Parallel brute force
+
+Parallel brute force divides the possible selections between separate R workers. Each worker finds its best feasible selection, and the function returns the best result across workers.
+
+```{r example-parallel, eval=FALSE}
+brute_force_knapsack(
+  items,
+  W = 50,
+  parallel = TRUE,
+  cores = 2
+)
+```
+
+The result matches serial brute force. Starting workers, transferring data, collecting results, and stopping workers introduce overhead, so larger problems may benefit more.
+
+## Data for the runtime measurements
+
+We use the random-number settings from the lab instructions. All datasets are generated before timing so that data generation is excluded from the measurements.
+
+```{r benchmark-data}
+suppressWarnings(RNGversion("3.5.3"))
+set.seed(42, kind = "Mersenne-Twister", normal.kind = "Inversion")
+
+n <- 2000
+
+knapsack_objects <- data.frame(
+  w = sample(1:4000, size = n, replace = TRUE),
+  v = runif(n, 0, 10000)
+)
+
+items16 <- knapsack_objects[1:16, ]
+items20 <- knapsack_objects[1:20, ]
+items500 <- knapsack_objects[1:500, ]
+
+# Generate a separate dataset for the million-object greedy measurement.
+set.seed(42, kind = "Mersenne-Twister", normal.kind = "Inversion")
+
+items_million <- data.frame(
+  w = sample(1:4000, size = 1000000, replace = TRUE),
+  v = runif(1000000, 0, 10000)
+)
+```
+
+We use `microbenchmark()` from Lecture 6 to repeat the measurements. We focus on the median runtime, while the lower and upper quartiles describe variation between runs.
+
+The required timing cases use different input sizes, so their runtimes should be interpreted separately.
+
+## Brute force with 16 objects and serial optimization
+
+The original function retrieves `x$w` and `x$v` inside the search loop. The improved function extracts these columns once before the loop:
+
+```{r optimization-code, eval=FALSE}
+weights <- x$w
+values <- x$v
+```
+
+The loop then uses `weights` and `values` directly. This reduces repeated data-frame access while keeping the same search.
+
+```{r benchmark-improvement}
+bf_times <- microbenchmark::microbenchmark(
+  original = before(items16, W = 2000),
+  improved = brute_force_knapsack(items16, W = 2000),
+  times = 20L,
+  unit = "ms",
+  check = "equal"
+)
+
+bf_times
+
+# Compare the median runtimes.
+serial_speedup <-
+  median(bf_times$time[bf_times$expr == "original"]) /
+  median(bf_times$time[bf_times$expr == "improved"])
+```
+
+The ratio of original to improved median runtime is **`r round(serial_speedup, 2)`**. A ratio above 1 means the improved version is faster; below 1 means it is slower in these measurements.
+
+This change affects the work performed for each selection, but the number of selections still grows exponentially.
+
+The `check = "equal"` argument checks that both versions return the same result before timing them.
+
+### Profiling
+
+We used `profvis` to investigate time spent inside the brute-force loop. The following code can be run from the package project directory to inspect the original function with its source lines.
+
 ```{r profiling, eval=FALSE}
+source("R/brute_force_before.R", keep.source = TRUE)
+
 profvis::profvis({
-  brute_force_knapsack(items16, W = 2000)
+  for (i in seq_len(10)) {
+    brute_force_before(items16, W = 2000)
+  }
 })
 ```
 
-The profile highlighted time spent calculating total weights inside the loop. We extracted the weight and value columns once before the loop and reused those vectors, avoiding repeated column retrieval.
+The profile highlighted time spent in the weight-calculation part of the loop. We moved the retrieval of the weight and value columns outside the loop, reducing repeated data-frame access. The repeated benchmark above measures the resulting change in overall runtime.
 
-Elapsed time decreased from 0.30 to 0.15 seconds: an observed speedup of 2 and a 50% reduction in runtime. The algorithm still examines all possible selections. Repeated measurements would be needed to estimate the improvement more reliably.
+## Dynamic programming with 500 objects
+
+We measure dynamic programming with 500 objects and capacity 3500. We use five repetitions because this case takes substantially longer than the smaller examples.
+
+```{r benchmark-dynamic}
+dynamic_times <- microbenchmark::microbenchmark(
+  dynamic = knapsack_dynamic(items500, W = 3500),
+  times = 5L,
+  unit = "s"
+)
+
+dynamic_times
+```
+
+The median in the output gives the measured runtime in seconds for the lab's 500-object case. Both the number of objects and the capacity affect the work required by dynamic programming.
+
+## Greedy with 1,000,000 objects
+
+We measure the greedy algorithm with one million objects and capacity 3500, using 20 repetitions.
+
+```{r benchmark-greedy}
+greedy_times <- microbenchmark::microbenchmark(
+  greedy = greedy_knapsack(items_million, W = 3500),
+  times = 20L,
+  unit = "ms"
+)
+
+greedy_times
+```
+
+The median in the output gives the measured runtime in milliseconds for the lab's million-object case. Greedy can handle this input size because it avoids examining every possible selection.
+
+## Parallelization: the chosen starred exercise
+
+We compare serial execution with two PSOCK workers. PSOCK workers can be used on Windows, macOS, and Linux. Each measurement includes creating workers, transferring data, collecting results, and stopping workers.
+
+### Comparison with 16 objects
+
+We first compare the serial and parallel versions on the same 16-object dataset, using 10 repetitions for each version.
+
+```{r benchmark-parallel-16}
+parallel16_times <- microbenchmark::microbenchmark(
+  serial = brute_force_knapsack(items16, W = 2000),
+  parallel = brute_force_knapsack(
+    items16,
+    W = 2000,
+    parallel = TRUE,
+    cores = 2
+  ),
+  times = 10L,
+  unit = "ms",
+  check = "equal"
+)
+
+parallel16_times
+
+parallel16_speedup <-
+  median(parallel16_times$time[parallel16_times$expr == "serial"]) /
+  median(parallel16_times$time[parallel16_times$expr == "parallel"])
+```
+
+The ratio of serial to parallel median runtime is **`r round(parallel16_speedup, 2)`**. A ratio above 1 indicates a measured benefit from parallelization; below 1 indicates that parallel execution is slower.
+
+### Comparison with 20 objects
+
+We also examine 20 objects, giving each worker more work. Increasing the number of objects from 16 to 20 increases the number of selections from `2^16` to `2^20`, which is 16 times as many selections.
+
+```{r benchmark-parallel-20}
+parallel20_times <- microbenchmark::microbenchmark(
+  serial = brute_force_knapsack(items20, W = 2000),
+  parallel = brute_force_knapsack(
+    items20,
+    W = 2000,
+    parallel = TRUE,
+    cores = 2
+  ),
+  times = 10L,
+  unit = "s",
+  check = "equal"
+)
+
+parallel20_times
+
+parallel20_speedup <-
+  median(parallel20_times$time[parallel20_times$expr == "serial"]) /
+  median(parallel20_times$time[parallel20_times$expr == "parallel"])
+```
+
+The ratio of serial to parallel median runtime is **`r round(parallel20_speedup, 2)`**.
+
+Parallel execution can reduce the search time by sharing the selections between workers. However, worker overhead can outweigh the benefit for small inputs. The algorithm still examines all selections, so exponential growth remains.
+
+## Summary of Performance Results
+The serial optimization reduced median runtime by approximately 26.5%. With two workers, parallel execution took approximately 2.55 times as long as serial execution for 16 objects, but reduced median runtime by approximately 22.0% for 20 objects. These measurements illustrate how worker overhead can outweigh the benefit for small workloads, while larger workloads can benefit from parallelization.
+
+## Reproducibility
+
+The results depend on the computer, R version, and background activity. The information below records the software environment used for these measurements.
+
+```{r session-info}
+sessionInfo()
+```

@@ -1,13 +1,13 @@
 #' This code solves the knapsack problem using the dynamic programming approach + with a fun recursie way
 #'
-#' It finds objects with the highest masx value without going over
+#' It finds objects with the highest max value without going over
 #' maximum weight chosen. Each object can only be selected once
 #' The function uses recursion and saves results in a table which is filled by the recursie recursion function
 #'
-#' @param x Is a data frame with two columns: \code{w} is its weights and
-#'   \code{v} the values. Weights has to be positive integers
-#'   Values also. Both columns must contain only finite numbers
-#' @param W Is a single finite number giving the max weight
+#' @param x A data frame with two numeric columns: \code{w}, containing
+#'   positive integer weights, and \code{v}, containing positive values.
+#'   Both columns must contain only finite numbers.
+#' @param W A single finite, non-negative integer giving the maximum weight.
 #'
 #' @return A list is returned with:
 #' \describe{

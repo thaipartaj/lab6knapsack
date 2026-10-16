@@ -14,14 +14,16 @@ Description: Implements brute-force search, dynamic programming,
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 URL: https://github.com/thaipartaj/lab6knapsack
 BugReports: https://github.com/thaipartaj/lab6knapsack/issues
 Suggests: 
     knitr,
+    microbenchmark,
+    profvis,
     rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Imports: 
     parallel
+Config/roxygen2/version: 8.1.1
