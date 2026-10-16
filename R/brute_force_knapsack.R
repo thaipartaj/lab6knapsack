@@ -1,30 +1,66 @@
 #' Solve the Knapsack Problem by Brute Force
 #'
-#' Examines every possible selection of items and returns the feasible selection with the greatest total value.
+#' Examines every possible selection of items and returns the feasible
+#' selection with the greatest total value. The search can run serially
+#' or in parallel.
 #'
 #' @param x A data frame with exactly two numeric columns: w (weights) and v (values). All entries must be positive and finite.
-#'
 #' @param W A single positive, finite number giving the maximum total weight.
+#' @param parallel A single non-missing logical value. If FALSE, the search runs serially.
+#'                 If TRUE, the search uses the internal parallel implementation. Defaults to FALSE.
+#' @param cores Requested number of workers when parallel is TRUE.
+#'   Must be NULL or a single positive, finite whole number.
+#'   NULL uses parallel::detectCores(), with a fallback to one worker if detection fails. Ignored when parallel is FALSE.
 #'
-#' @details This implementation supports at most 31 items because it
-#'   uses non-negative R integers with intToBits(). Brute-force search
-#'   is intended for small inputs: it examines 2^n selections.
-#'   If several selections have the same maximum value, the first one
-#'   encountered is returned.
+#' @details
+#' This implementation supports at most 31 items because it uses
+#' non-negative R integers with intToBits(). It examines all \eqn{2^n} possible selections, where n is the number of rows in x.
+#' Brute-force search is therefore intended for small inputs.
+#'
+#' In parallel mode, the combination numbers are divided into consecutive
+#' ranges. Each worker searches its assigned range, and the best result
+#' across all ranges is returned. The implementation uses PSOCK workers,
+#' which support Windows, macOS and Linux.
+#'
+#' The number of workers is capped at the number of combinations.
+#' If only one worker is requested or needed, the search runs directly
+#' without starting a cluster.
+#'
+#' Starting workers, transferring data, collecting results and stopping
+#' workers introduce overhead. Parallel execution may therefore be slower
+#' than serial execution for small inputs.
+#'
+#' Both modes return the same solution. If several selections have the
+#' same maximum value, the first selection in ascending combination-number
+#' order is returned.
 #'
 #' @return A named list containing:
 #'   \describe{
 #'     \item{value}{The total value of the selected items, without rounding.}
 #'     \item{elements}{The row indices of the selected items in x.}
 #'   }
+#'   If no item fits, value is zero and elements is an empty integer vector.
 #'
 #' @export
 #'
 #' @examples
 #' items <- data.frame(w = c(2, 3, 4), v = c(3, 4, 5))
+#'
+#' # Serial search
 #' brute_force_knapsack(items, W = 5)
+#'
+#' \dontrun{
+#' # Parallel search using two workers
+#' brute_force_knapsack(items, W = 5, parallel = TRUE, cores = 2)
+#' }
 
-brute_force_knapsack <- function(x, W) {
+brute_force_knapsack <- function(x, W, parallel = FALSE, cores = NULL) {
+
+  # Validate the switch before choosing an implementation.
+  stopifnot("parallel must be TRUE or FALSE." = is.logical(parallel) && length(parallel) == 1L && !is.na(parallel))
+
+  # Forward parallel requests to the separate exported function.
+  if (parallel) {return(brute_force_knapsack_parallel(x, W, cores = cores))}
 
   # Check the inputs
   stopifnot(
