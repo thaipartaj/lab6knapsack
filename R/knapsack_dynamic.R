@@ -89,9 +89,9 @@ knapsack_dynamic <- function(x, W) {
     }
   }
 
-  # Return the rounded best value and the chosen objects
+  # Return the unrounded best value and the chosen objects
   list(
-    value = round(tabell[antal_foremal + 1, W + 1]),
+    value = tabell[antal_foremal + 1, W + 1],
     elements = valda
   )
 }
