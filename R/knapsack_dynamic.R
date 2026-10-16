@@ -1,6 +1,31 @@
+#' This code solves the knapsack problem using the dynamic programming approach + with a fun recursie way
+#'
+#' It finds objects with the highest masx value without going over
+#' maximum weight chosen. Each object can only be selected once
+#' The function uses recursion and saves results in a table which is filled by the recursie recursion function
+#'
+#' @param x Is a data frame with two columns: \code{w} is its weights and
+#'   \code{v} the values. Weights has to be positive integers
+#'   Values also. Both columns must contain only finite numbers
+#' @param W Is a single finite number giving the max weight
+#'
+#' @return A list is returned with:
+#' \describe{
+#'   \item{value}{The highest total value}
+#'   \item{elements}{The row numbers of the selected objects in \code{x}.}
+#' }
+#'
+#' @examples
+#' objects <- data.frame(
+#'   w = c(2, 3, 4),
+#'   v = c(10, 20, 25)
+#' )
+#' knapsack_dynamic(objects, W = 5)
+#'
+#' @export
 knapsack_dynamic <- function(x, W) {
 
-  # Check the inputs
+  # Being by checking if the inputs are correct
   stopifnot(
     is.data.frame(x),
     ncol(x) == 2,
@@ -19,42 +44,41 @@ knapsack_dynamic <- function(x, W) {
     W == floor(W)
   )
 
-  # Every row in x is an object
+  # Defining the amount of objects
   antal_foremal <- nrow(x)
 
-  # Create a table for saving answers
-  # +1 gives space for 0 objects and capacity 0
+  # Creating the matrix to save values in, +1 is for the 0 row and column
   tabell <- matrix(NA, antal_foremal + 1, W + 1)
 
-  # Find the best value using the first foremal objects
-  # with the given kapacitet
+
+
+  # Now recursive function is used ti find the best value using the first objects with a secified capacity.
   KS <- function(foremal, kapacitet) {
 
-    # If this answer is already saved, return it directly
+    # This just stops the function if it already has been saved
     if (!is.na(tabell[foremal + 1, kapacitet + 1])) {
       return(tabell[foremal + 1, kapacitet + 1])
     }
 
-    # Check if no objects are left or no space is left then the best value is 0
+    # This checks if we have run out of objects or we've reached max space in the knapsack
     if (foremal == 0 || kapacitet == 0) {
       result <- 0
 
-      # If the object is too heavy, skip it
+    # This codes checks that the objects ins't too heavy for the knap
     } else if (x$w[foremal] > kapacitet) {
       result <- KS(foremal - 1, kapacitet)
 
     } else {
 
       # This just says if it fits in the knapsack we should compare two alterantives
-      # utan will then be the best value if we leave the current object,
+      # utan will then be the best value if we leave the current object
       utan <- KS(foremal - 1, kapacitet)
 
-      # Best value including the current object
-      # Add its value to the best value for the remaining capacity
+      # This will be the best value including the current object and we add its value to the best value for the remaining capacity
       med <- x$v[foremal] +
         KS(foremal - 1, kapacitet - x$w[foremal])
 
-      # Keep the higher value
+      # We always want to save the highest objects of the two alternatives.
       result <- max(utan, med)
     }
 
@@ -64,32 +88,31 @@ knapsack_dynamic <- function(x, W) {
     return(result)
   }
 
-  # Solve the full problem and save the answers in tabell
+  # Solve the full problem and save the answers in the table (matrix)
   KS(antal_foremal, W)
 
-  # Need an empty vector for the chosen objects
+  # We create a vector to save the chosen objects in
   valda <- integer(0)
 
-  # Start with the backpack's whole max weight
+  # We start with the backpacks max weight
   kapacitet <- W
 
-  # Loop through all objects reversed, from the last to the first
+  # Then we can loop through all objects reversed that just is from the last to the first
   for (foremal in rev(seq_len(antal_foremal))) {
 
-    # If the value is higher with this object available,
-    # we need to include it
+    # If the value is higher with this object include it
     if (KS(foremal, kapacitet) >
         KS(foremal - 1, kapacitet)) {
 
-      # Save the object's row number
+      # Then we save the row number of this object
       valda <- c(foremal, valda)
 
-      # Decrease the remaining capacity by the object's weight
+      # Then we must decrease the remaning capacity by the objects weight
       kapacitet <- kapacitet - x$w[foremal]
     }
   }
 
-  # Return the unrounded best value and the chosen objects
+  # Now we can return the object and best chosen objects!!
   list(
     value = tabell[antal_foremal + 1, W + 1],
     elements = valda
