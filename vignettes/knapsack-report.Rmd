@@ -262,7 +262,7 @@ The ratio of serial to parallel median runtime is **`r round(parallel20_speedup,
 Parallel execution can reduce the search time by sharing the selections between workers. However, worker overhead can outweigh the benefit for small inputs. The algorithm still examines all selections, so exponential growth remains.
 
 ## Summary of Performance Results
-The serial optimization reduced median runtime by approximately 26.5%. With two workers, parallel execution took approximately 2.55 times as long as serial execution for 16 objects, but reduced median runtime by approximately 22.0% for 20 objects. These measurements illustrate how worker overhead can outweigh the benefit for small workloads, while larger workloads can benefit from parallelization.
+In our local benchmark run on Windows 11 with R 4.5.0, the serial optimization reduced median runtime by approximately 26.5%. With two workers, parallel execution took approximately 2.55 times as long as serial execution for 16 objects, but reduced median runtime by approximately 22.0% for 20 objects. These measurements illustrate how worker overhead can outweigh the benefit for small workloads, while larger workloads can benefit from parallelization. The benchmark outputs above are recalculated whenever the vignette is built and may differ from these local measurements.
 
 ## Reproducibility
 
